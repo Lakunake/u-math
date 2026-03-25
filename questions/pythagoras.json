@@ -1,0 +1,9 @@
+{
+    "id": "pythagoras",
+    "a": "a^2 + b^2 = c^2",
+    "b": "a + b = c",
+    "c": "E = mc^2",
+    "d": "x = -b/a",
+    "answer": "a",
+    "value": 30
+}
