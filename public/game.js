@@ -221,7 +221,10 @@ socket.on('playerEliminated', (data) => { toast(`${data.username} elendi!`, 'war
 
 socket.on('turnChanged', (data) => {
     $('turn-text').innerHTML = `Sıra: <span class="current-turn">${esc(data.username)}</span>`;
-    if (data.playerId === myId) toast('Senin sıran! Bir kart oyna.', 'warning');
+    if (data.playerId === myId) {
+        const msg = data.extraTurn ? 'Ekstra tur! Tekrar oynuyorsun.' : 'Senin sıran! Bir kart oyna.';
+        toast(msg, data.extraTurn ? 'info' : 'warning');
+    }
 });
 
 socket.on('gameOver', (data) => {

@@ -5,6 +5,29 @@ const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
 const path = require('path');
+const readline = require('readline');
+
+// ── Crash Handlers ─────────────────────────────────────────────────────────────
+
+function waitAndExit(err) {
+    console.error('\n' + '='.repeat(50));
+    console.error('CRITICAL ERROR DETECTED:');
+    console.error(err);
+    console.error('='.repeat(50));
+    console.log('\nPress Enter to exit...');
+    
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+    });
+
+    rl.question('', () => {
+        process.exit(1);
+    });
+}
+
+process.on('uncaughtException', waitAndExit);
+process.on('unhandledRejection', waitAndExit);
 
 // ── App Setup ──────────────────────────────────────────────────────────────────
 
@@ -29,63 +52,125 @@ const HAND_SIZE = 5;
 const ANSWER_TIMEOUT_MS = 30000;
 const RECOIL_DIVISOR = 3;
 
-// ── Question Pool ──────────────────────────────────────────────────────────────
+// ── Question Groups ────────────────────────────────────────────────────────────
+// Each subfolder in questions/ is a "question group" (card type).
+// Structure:
+//   questions/<groupId>/meta.json   → { "type": "normal", "value": 30 }
+//   questions/<groupId>/1.json      → { "a": "...", "b": "...", "c": "...", "d": "...", "answer": "a" }
+//   questions/<groupId>/2.json      → ...
+//   questions/<groupId>/1.png       → (optional) image for question 1
+// Card image: cards/<groupId>.png
 
 const questionsDir = path.join(__dirname, 'questions');
 const cardsDir = path.join(__dirname, 'cards');
 
-// Ensure directories exist
 [questionsDir, cardsDir].forEach(dir => {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir);
 });
 
-let questionPool = [];
+let questionGroups = []; // Array of { id, type, value, questions: [{ qId, a, b, c, d, answer }] }
 
-function loadQuestions() {
-    const questions = [];
+function loadQuestionGroups() {
+    const groups = [];
     try {
-        const files = fs.readdirSync(questionsDir).filter(f => f.endsWith('.json'));
-        for (const file of files) {
-            try {
-                const raw = fs.readFileSync(path.join(questionsDir, file), 'utf8');
-                const q = JSON.parse(raw);
-                q.id = file.replace('.json', '');
-                // Default values for optional fields
-                q.type = q.type || 'normal';   // normal | skip | reverse | draw2
-                q.value = q.value || 20;
-                questions.push(q);
-            } catch (err) {
-                console.error(`[Questions] Failed to load ${file}:`, err.message);
+        const entries = fs.readdirSync(questionsDir, { withFileTypes: true });
+        for (const entry of entries) {
+            if (!entry.isDirectory()) continue;
+            const groupId = entry.name;
+            const groupDir = path.join(questionsDir, groupId);
+
+            // Load meta.json
+            const metaPath = path.join(groupDir, 'meta.json');
+            let meta = { type: 'normal', value: 20 };
+            if (fs.existsSync(metaPath)) {
+                try {
+                    meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+                } catch (err) {
+                    console.error(`[Questions] Bad meta.json in ${groupId}:`, err.message);
+                }
             }
+
+            // Load individual questions (any .json that isn't meta.json)
+            const questions = [];
+            const files = fs.readdirSync(groupDir).filter(f => f.endsWith('.json') && f !== 'meta.json');
+            for (const file of files) {
+                try {
+                    const raw = fs.readFileSync(path.join(groupDir, file), 'utf8');
+                    const q = JSON.parse(raw);
+                    q.qId = file.replace('.json', ''); // e.g. "1", "2", "easy_one"
+                    questions.push(q);
+                } catch (err) {
+                    console.error(`[Questions] Failed to load ${groupId}/${file}:`, err.message);
+                }
+            }
+
+            if (questions.length === 0) {
+                console.warn(`[Questions] Group "${groupId}" has no questions, skipping`);
+                continue;
+            }
+
+            groups.push({
+                id: groupId,
+                type: meta.type || 'normal',
+                value: meta.value || 20,
+                questions
+            });
+            console.log(`[Questions]   ${groupId}: ${questions.length} question(s), type=${meta.type || 'normal'}, value=${meta.value || 20}`);
         }
     } catch (err) {
         console.error('[Questions] Failed to read directory:', err.message);
     }
-    return questions;
+    return groups;
 }
 
 // Initial load
-questionPool = loadQuestions();
-console.log(`[Questions] Loaded ${questionPool.length} question(s)`);
+questionGroups = loadQuestionGroups();
+console.log(`[Questions] Loaded ${questionGroups.length} group(s)`);
 
-// Hot-reload on file changes
-fs.watch(questionsDir, { persistent: false }, (eventType, filename) => {
+// Hot-reload on file changes (recursive)
+fs.watch(questionsDir, { persistent: false, recursive: true }, (eventType, filename) => {
     if (filename && filename.endsWith('.json')) {
-        questionPool = loadQuestions();
-        console.log(`[Questions] Reloaded — now ${questionPool.length} question(s)`);
+        questionGroups = loadQuestionGroups();
+        console.log(`[Questions] Reloaded — now ${questionGroups.length} group(s)`);
     }
 });
+
+/**
+ * Pick an unseen question from a group for this room.
+ * Tracks seen questions per group in room.seenQuestions.
+ * Resets when all questions in a group have been seen.
+ */
+function pickQuestion(room, group) {
+    if (!room.seenQuestions) room.seenQuestions = new Map();
+    if (!room.seenQuestions.has(group.id)) room.seenQuestions.set(group.id, new Set());
+
+    const seen = room.seenQuestions.get(group.id);
+
+    // Reset if all questions have been seen
+    if (seen.size >= group.questions.length) {
+        seen.clear();
+    }
+
+    // Filter to unseen questions
+    const unseen = group.questions.filter(q => !seen.has(q.qId));
+    const picked = unseen[Math.floor(Math.random() * unseen.length)];
+    seen.add(picked.qId);
+
+    return picked;
+}
+
 
 // ── Room State ─────────────────────────────────────────────────────────────────
 
 const rooms = new Map();
 
 /**
- * Create a shuffled copy of the question pool for use as a draw pile.
+ * Create a shuffled deck of group references for use as a draw pile.
+ * Each card in the deck is a reference to a question group.
  * Uses Fisher-Yates shuffle.
  */
 function createDeck() {
-    const deck = [...questionPool];
+    const deck = questionGroups.map(g => ({ id: g.id, type: g.type, value: g.value }));
     for (let i = deck.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [deck[i], deck[j]] = [deck[j], deck[i]];
@@ -193,7 +278,8 @@ io.on('connection', (socket) => {
             deck: [],
             currentQuestion: null,
             answeredThisRound: new Set(),
-            answerTimer: null
+            answerTimer: null,
+            seenQuestions: new Map()  // groupId -> Set of seen qIds
         };
 
         rooms.set(roomId, room);
@@ -258,7 +344,7 @@ io.on('connection', (socket) => {
             socket.emit('error', { message: 'En az 2 oyuncu gerekli!' });
             return;
         }
-        if (questionPool.length === 0) {
+        if (questionGroups.length === 0) {
             socket.emit('error', { message: 'Soru havuzu boş! questions/ klasörüne soru ekleyin.' });
             return;
         }
@@ -293,7 +379,13 @@ io.on('connection', (socket) => {
         if (cardIndex === -1) return; // card not in hand
 
         const card = player.hand.splice(cardIndex, 1)[0];
-        room.currentQuestion = card;
+
+        // Resolve a specific question from this card's question group
+        const group = questionGroups.find(g => g.id === card.id);
+        if (!group) return; // group was removed since card was drawn
+
+        const question = pickQuestion(room, group);
+        room.currentQuestion = { ...question, groupId: card.id, type: card.type, value: card.value };
         room.answeredThisRound = new Set();
 
         // Apply recoil to card player
@@ -304,20 +396,32 @@ io.on('connection', (socket) => {
         const drawn = drawCards(room, 1);
         player.hand.push(...drawn);
 
+        // Count alive connected players to handle 2-player special rules
+        const alivePlayers = room.players.filter(p => p.hp > 0 && p.isConnected);
+        const twoPlayerGame = alivePlayers.length === 2;
+
         // Handle special card types before asking question
         if (card.type === 'skip') {
-            // Skip: next player loses their turn AND takes the question
-            const skippedIdx = nextPlayerIndex(room, room.currentPlayerIndex);
-            if (skippedIdx !== -1) {
-                const skippedPlayer = room.players[skippedIdx];
-                // Skipped player must still answer, but alone
-                room.answeredThisRound = new Set(
-                    room.players.filter(p => p.id !== skippedPlayer.id && p.id !== socket.id)
-                        .map(p => p.id)
-                );
+            if (twoPlayerGame) {
+                // In 2-player: skip acts like the opponent answers alone, card player goes again
+                room.keepTurn = true;
+            } else {
+                // In 3+ players: skip the next player (they still must answer alone)
+                const skippedIdx = nextPlayerIndex(room, room.currentPlayerIndex);
+                if (skippedIdx !== -1) {
+                    const skippedPlayer = room.players[skippedIdx];
+                    room.answeredThisRound = new Set(
+                        room.players.filter(p => p.id !== skippedPlayer.id && p.id !== socket.id)
+                            .map(p => p.id)
+                    );
+                }
             }
         } else if (card.type === 'reverse') {
             room.direction *= -1;
+            if (twoPlayerGame) {
+                // In 2-player: reverse acts like skip — card player goes again
+                room.keepTurn = true;
+            }
         } else if (card.type === 'draw2') {
             const targetIdx = nextPlayerIndex(room, room.currentPlayerIndex);
             if (targetIdx !== -1) {
@@ -338,15 +442,17 @@ io.on('connection', (socket) => {
         room.answeredThisRound.add(socket.id);
 
         // Send question to all players
+        const q = room.currentQuestion;
         const questionPayload = {
             id: card.id,
+            qId: q.qId,
             type: card.type,
-            a: card.a,
-            b: card.b,
-            c: card.c,
-            d: card.d,
+            a: q.a,
+            b: q.b,
+            c: q.c,
+            d: q.d,
             value: card.value,
-            questionImage: `/questions/${card.id}.png`,
+            questionImage: `/questions/${card.id}/${q.qId}.png`,
             cardImage: `/cards/${card.id}.png`,
             playedBy: player.username,
             recoilTaken: recoil,
@@ -518,6 +624,18 @@ function finishRound(roomId) {
 }
 
 function advanceTurn(room) {
+    // In 2-player skip/reverse: keep the same player's turn
+    if (room.keepTurn) {
+        room.keepTurn = false;
+        io.to(room.id).emit('turnChanged', {
+            playerId: room.currentPlayerId,
+            username: room.players[room.currentPlayerIndex].username,
+            direction: room.direction,
+            extraTurn: true
+        });
+        return;
+    }
+
     const nextIdx = nextPlayerIndex(room, room.currentPlayerIndex);
     if (nextIdx === -1) return;
     room.currentPlayerIndex = nextIdx;

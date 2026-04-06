@@ -1,9 +1,0 @@
-{
-    "a": "x = (-b ± √(b²-4ac)) / 2a",
-    "b": "x = -b / 2a",
-    "c": "x = a² + b²",
-    "d": "x = b² - 4ac",
-    "answer": "a",
-    "value": 35,
-    "type": "skip"
-}
