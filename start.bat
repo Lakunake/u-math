@@ -1,4 +1,11 @@
 @echo off
-echo U-MAt Sunucusu Baslatiliyor...
+echo ==============================
+echo   U-MAt(hematics) Sunucusu
+echo ==============================
+echo.
+echo Bagimliliklar yukleniyor...
+call npm install --silent
+echo.
+echo Sunucu baslatiliyor...
 npm start
 pause

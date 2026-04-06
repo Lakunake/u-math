@@ -3,161 +3,103 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="U-MAt(hematics) — Matematik temalı çok oyunculu online kart oyunu">
     <title>U-MAt(hematics)</title>
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; color: #fff; text-align: center; }
-        #game-container { display: none; margin-top: 20px; }
-        #canvas-wrapper { border: 2px solid #555; background: #fff; margin: 20px auto; width: 600px; height: 400px; }
-        .hp-bar { height: 20px; background: green; transition: width 0.3s; }
-        .player-info { margin: 10px; padding: 10px; border: 1px solid #444; border-radius: 8px; }
-        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        button:hover { background: #0056b3; }
-        #options-container button { margin: 5px; }
-    </style>
+    <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-    <h1>U-MAt(hematics)</h1>
+    <div class="app-container">
+        <header class="header">
+            <h1>U-MAt(hematics)</h1>
+            <p class="subtitle">Matematik Kart Savaşı</p>
+        </header>
 
-    <div id="lobby">
-        <input type="text" id="username" placeholder="Kullanıcı Adı">
-        <br><br>
-        <button onclick="createRoom()">Oda Oluştur</button>
-        <br><br>
-        <input type="text" id="roomIdInput" placeholder="Oda Kodu">
-        <button onclick="joinRoom()">Katıl</button>
-    </div>
-
-    <div id="game-container">
-        <h2 id="room-code-display"></h2>
-        <div id="players-list"></div>
-        <button id="start-game-btn" onclick="startGame()" style="display:none;">Oyunu Başlat</button>
-
-        <div id="question-area" style="display:none;">
-            <h3>Soru: <span id="question-text"></span></h3>
-            <img id="card-img" style="max-width: 150px; display: block; margin: 10px auto; border-radius: 8px;">
-            <img id="question-img" style="max-width: 100%; display: block; margin: 10px auto;">
-            <div id="options-container"></div>
-            <p>Puan: <span id="question-value"></span></p>
+        <!-- Lobby -->
+        <div id="lobby" class="glass-panel">
+            <h2>Oyuna Katıl</h2>
+            <div class="input-group">
+                <label>Kullanıcı Adı</label>
+                <input type="text" id="username" class="input-field" placeholder="İsmini yaz..." maxlength="20">
+            </div>
+            <button class="btn btn-primary" onclick="createRoom()">Oda Oluştur</button>
+            <div class="divider">veya</div>
+            <div class="join-row">
+                <input type="text" id="roomIdInput" class="input-field" placeholder="Oda Kodu" maxlength="6">
+                <button class="btn btn-secondary" onclick="joinRoom()">Katıl</button>
+            </div>
         </div>
 
-        <div id="canvas-wrapper">
-            <canvas id="solver-canvas" width="600" height="400"></canvas>
-        </div>
-        <button onclick="clearCanvas()">Çizimi Temizle</button>
-    </div>
+        <!-- Game -->
+        <div id="game-container">
+            <div class="top-bar glass-panel">
+                <div class="room-code" id="room-code"></div>
+                <div class="turn-indicator" id="turn-text"></div>
+                <button id="start-game-btn" class="btn btn-primary btn-small" onclick="startGame()" style="display:none">Oyunu Başlat</button>
+            </div>
 
-    <script>
-        const socket = io();
-        let currentRoomId = null;
-        let canvas;
+            <div id="players-grid" class="players-grid"></div>
 
-        window.onload = () => {
-            canvas = new fabric.Canvas('solver-canvas', {
-                isDrawingMode: true,
-                freeDrawingBrush: new fabric.PencilBrush(canvas)
-            });
-            canvas.freeDrawingBrush.width = 2;
-            canvas.freeDrawingBrush.color = '#000';
-        };
+            <div id="waiting-area" class="glass-panel waiting-overlay">
+                <h2>Oyuncular Bekleniyor...</h2>
+                <p>Host oyunu başlatacak</p>
+            </div>
 
-        function createRoom() {
-            const username = document.getElementById('username').value;
-            if (username) socket.emit('createRoom', username);
-        }
-
-        function joinRoom() {
-            const username = document.getElementById('username').value;
-            const roomId = document.getElementById('roomIdInput').value;
-            if (username && roomId) socket.emit('joinRoom', { roomId, username });
-        }
-
-        function startGame() {
-            socket.emit('startGame', currentRoomId);
-        }
-
-        function clearCanvas() {
-            canvas.clear();
-            canvas.backgroundColor = '#fff';
-            canvas.renderAll();
-        }
-
-        socket.on('roomCreated', (room) => {
-            currentRoomId = room.id;
-            document.getElementById('lobby').style.display = 'none';
-            document.getElementById('game-container').style.display = 'block';
-            document.getElementById('room-code-display').innerText = `Oda: ${room.id}`;
-            document.getElementById('start-game-btn').style.display = 'inline-block';
-            updatePlayers(room.players);
-        });
-
-        socket.on('roomJoined', (room) => {
-            currentRoomId = room.id;
-            document.getElementById('lobby').style.display = 'none';
-            document.getElementById('game-container').style.display = 'block';
-            document.getElementById('room-code-display').innerText = `Oda: ${room.id}`;
-            document.getElementById('start-game-btn').style.display = 'none';
-            updatePlayers(room.players);
-        });
-
-        socket.on('roomUpdated', (room) => {
-            currentRoomId = room.id;
-            document.getElementById('lobby').style.display = 'none';
-            document.getElementById('game-container').style.display = 'block';
-            document.getElementById('room-code-display').innerText = `Oda: ${room.id}`;
-            updatePlayers(room.players);
-        });
-
-        socket.on('gameStarted', () => {
-            document.getElementById('start-game-btn').style.display = 'none';
-            document.getElementById('question-area').style.display = 'block';
-        });
-
-        socket.on('newQuestion', (q) => {
-            document.getElementById('question-text').innerText = q.id;
-            document.getElementById('question-value').innerText = q.value;
-            document.getElementById('question-img').src = q.questionImage;
-            document.getElementById('card-img').src = q.cardImage;
-            const container = document.getElementById('options-container');
-            container.innerHTML = '';
-            ['a', 'b', 'c', 'd'].forEach(opt => {
-                const btn = document.createElement('button');
-                btn.innerText = `${opt.toUpperCase()}: ${q[opt]}`;
-                btn.onclick = () => submitAnswer(opt);
-                container.appendChild(btn);
-            });
-        });
-
-        function submitAnswer(answer) {
-            socket.emit('submitAnswer', { roomId: currentRoomId, answer });
-        }
-
-        socket.on('feedback', (msg) => { alert(msg); });
-
-        function updatePlayers(players) {
-            const list = document.getElementById('players-list');
-            list.innerHTML = '';
-            players.forEach(p => {
-                const div = document.createElement('div');
-                div.className = 'player-info';
-                div.innerHTML = `
-                    <strong>${p.username}</strong>
-                    <div style="background:#555; width:100%; height:20px;">
-                        <div class="hp-bar" style="width: ${(p.hp / 200) * 100}%;"></div>
+            <!-- Question -->
+            <div id="question-panel" class="glass-panel question-panel">
+                <div class="question-header">
+                    <h3>Soru</h3>
+                    <div class="question-meta">
+                        <span id="q-type-badge" class="badge badge-normal">normal</span>
+                        <span id="q-value" class="question-value">0 hasar</span>
                     </div>
-                    <span>HP: ${p.hp}</span>
-                `;
-                list.appendChild(div);
-            });
-        }
+                </div>
+                <p class="played-by-info" id="q-played-by"></p>
+                <div class="timer-bar-container"><div class="timer-bar" id="timer-bar"></div></div>
+                <div class="question-images">
+                    <img id="q-card-img" class="card-image" alt="Kart">
+                    <img id="q-question-img" class="question-image" alt="Soru">
+                </div>
+                <div id="options-grid" class="options-grid"></div>
+            </div>
 
-        socket.on('gameOver', (data) => {
-            alert(`Oyun Bitti! Kaybeden: ${data.loser}`);
-            location.reload();
-        });
+            <!-- Hand -->
+            <div class="hand-panel glass-panel">
+                <h3>Elin</h3>
+                <div id="hand-cards" class="hand-cards"></div>
+            </div>
 
-        socket.on('error', (msg) => { alert(msg); });
-    </script>
+            <!-- Drawing Canvas -->
+            <div class="canvas-panel glass-panel">
+                <div class="canvas-toolbar">
+                    <label>Kalem:</label>
+                    <input type="color" id="draw-color" class="color-picker" value="#000000" onchange="onColorChange(event)">
+                    <label>Boyut:</label>
+                    <input type="range" id="brush-range" class="brush-size" min="1" max="20" value="2" oninput="onBrushSize(event)">
+                    <button class="btn btn-small btn-secondary" onclick="toggleEraser()">Silgi</button>
+                    <button class="btn btn-small btn-secondary" onclick="clearCanvas()">Temizle</button>
+                </div>
+                <div class="canvas-wrapper">
+                    <canvas id="solver-canvas"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Over Overlay -->
+    <div id="game-over-overlay" class="game-over-overlay">
+        <div class="game-over-panel glass-panel">
+            <h2>Oyun Bitti!</h2>
+            <div id="winner-name" class="winner-name"></div>
+            <div id="eliminated-list" class="eliminated-list"></div>
+            <button class="btn btn-primary" onclick="returnToLobby()">Lobiye Dön</button>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+    <script src="/game.js"></script>
 </body>
 </html>
