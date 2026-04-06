@@ -1,1 +1,8 @@
-{ "type": "skip", "value": 35 }
+{
+    "value": 35,
+    "types": [
+        { "type": "normal", "weight": 50 },
+        { "type": "skip",   "weight": 30 },
+        { "type": "draw2",  "weight": 20 }
+    ]
+}

@@ -53,12 +53,12 @@ const ANSWER_TIMEOUT_MS = 30000;
 const RECOIL_DIVISOR = 3;
 
 // ── Question Groups ────────────────────────────────────────────────────────────
-// Each subfolder in questions/ is a "question group" (card type).
+// Each subfolder in questions/ is a "question group".
 // Structure:
-//   questions/<groupId>/meta.json   → { "type": "normal", "value": 30 }
+//   questions/<groupId>/meta.json   → { "value": 30, "types": [{"type":"normal","weight":70},{"type":"skip","weight":30}] }
 //   questions/<groupId>/1.json      → { "a": "...", "b": "...", "c": "...", "d": "...", "answer": "a" }
-//   questions/<groupId>/2.json      → ...
-//   questions/<groupId>/1.png       → (optional) image for question 1
+//   questions/<groupId>/1.png       → (optional) image for question variant 1
+// Backwards-compat: "type": "normal" instead of "types" array is still supported.
 // Card image: cards/<groupId>.png
 
 const questionsDir = path.join(__dirname, 'questions');
@@ -68,7 +68,17 @@ const cardsDir = path.join(__dirname, 'cards');
     if (!fs.existsSync(dir)) fs.mkdirSync(dir);
 });
 
-let questionGroups = []; // Array of { id, type, value, questions: [{ qId, a, b, c, d, answer }] }
+let questionGroups = []; // Array of { id, types:[{type,weight}], value, questions:[{qId,...}] }
+
+/** Normalize meta into a types array with weights. */
+function normalizeMeta(meta) {
+    if (Array.isArray(meta.types) && meta.types.length > 0) {
+        return meta.types;  // already correct format
+    }
+    // Backwards-compat: single type string
+    const t = meta.type || 'normal';
+    return [{ type: t, weight: 1 }];
+}
 
 function loadQuestionGroups() {
     const groups = [];
@@ -79,9 +89,8 @@ function loadQuestionGroups() {
             const groupId = entry.name;
             const groupDir = path.join(questionsDir, groupId);
 
-            // Load meta.json
             const metaPath = path.join(groupDir, 'meta.json');
-            let meta = { type: 'normal', value: 20 };
+            let meta = { value: 20 };
             if (fs.existsSync(metaPath)) {
                 try {
                     meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
@@ -90,14 +99,13 @@ function loadQuestionGroups() {
                 }
             }
 
-            // Load individual questions (any .json that isn't meta.json)
             const questions = [];
             const files = fs.readdirSync(groupDir).filter(f => f.endsWith('.json') && f !== 'meta.json');
             for (const file of files) {
                 try {
                     const raw = fs.readFileSync(path.join(groupDir, file), 'utf8');
                     const q = JSON.parse(raw);
-                    q.qId = file.replace('.json', ''); // e.g. "1", "2", "easy_one"
+                    q.qId = file.replace('.json', '');
                     questions.push(q);
                 } catch (err) {
                     console.error(`[Questions] Failed to load ${groupId}/${file}:`, err.message);
@@ -109,13 +117,10 @@ function loadQuestionGroups() {
                 continue;
             }
 
-            groups.push({
-                id: groupId,
-                type: meta.type || 'normal',
-                value: meta.value || 20,
-                questions
-            });
-            console.log(`[Questions]   ${groupId}: ${questions.length} question(s), type=${meta.type || 'normal'}, value=${meta.value || 20}`);
+            const types = normalizeMeta(meta);
+            groups.push({ id: groupId, types, value: meta.value || 20, questions });
+            const typeDesc = types.map(t => `${t.type}(${t.weight})`).join('/');
+            console.log(`[Questions]   ${groupId}: ${questions.length} question(s), types=[${typeDesc}], value=${meta.value || 20}`);
         }
     } catch (err) {
         console.error('[Questions] Failed to read directory:', err.message);
@@ -165,12 +170,28 @@ function pickQuestion(room, group) {
 const rooms = new Map();
 
 /**
- * Create a shuffled deck of group references for use as a draw pile.
- * Each card in the deck is a reference to a question group.
- * Uses Fisher-Yates shuffle.
+ * Roll a random card type from a group's weighted types array.
+ * Weight values are relative (don't need to sum to 100).
+ */
+function rollCardType(group) {
+    const types = group.types;
+    if (types.length === 1) return types[0].type;
+    const total = types.reduce((sum, t) => sum + (t.weight || 1), 0);
+    let roll = Math.random() * total;
+    for (const entry of types) {
+        roll -= (entry.weight || 1);
+        if (roll <= 0) return entry.type;
+    }
+    return types[types.length - 1].type;
+}
+
+/**
+ * Create a shuffled deck of group references.
+ * Type is NOT assigned here — it's rolled at draw time so the same
+ * group can appear as different types in different deals.
  */
 function createDeck() {
-    const deck = questionGroups.map(g => ({ id: g.id, type: g.type, value: g.value }));
+    const deck = questionGroups.map(g => ({ id: g.id, value: g.value }));
     for (let i = deck.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [deck[i], deck[j]] = [deck[j], deck[i]];
@@ -180,6 +201,7 @@ function createDeck() {
 
 /**
  * Draw `count` cards from the room's deck.
+ * Type is rolled fresh each time a card is drawn from a group.
  * If the deck is empty, reshuffle and refill.
  */
 function drawCards(room, count) {
@@ -188,7 +210,11 @@ function drawCards(room, count) {
         if (room.deck.length === 0) {
             room.deck = createDeck();
         }
-        drawn.push(room.deck.pop());
+        const ref = room.deck.pop();
+        // Roll the card type from the group's weighted distribution
+        const group = questionGroups.find(g => g.id === ref.id);
+        const rolledType = group ? rollCardType(group) : 'normal';
+        drawn.push({ id: ref.id, type: rolledType, value: ref.value });
     }
     return drawn;
 }
