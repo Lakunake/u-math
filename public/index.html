@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
     <title>U-MAt(hematics)</title>
     <link rel="stylesheet" href="/style.css">
 </head>
+
 <body>
     <div class="app-container">
         <header class="header">
@@ -34,8 +36,12 @@
             <div class="top-bar glass-panel">
                 <div class="room-code" id="room-code"></div>
                 <div class="turn-indicator" id="turn-text"></div>
-                <button id="start-game-btn" class="btn btn-primary btn-small" onclick="startGame()" style="display:none">Oyunu Başlat</button>
+                <button id="start-game-btn" class="btn btn-primary btn-small" onclick="startGame()"
+                    style="display:none">Oyunu Başlat</button>
+                <button id="mute-btn" class="btn btn-secondary btn-small" onclick="toggleMute()" title="Ses">🔊</button>
             </div>
+
+            <div id="top-card-indicator" class="top-card-indicator glass-panel" style="display:none"></div>
 
             <div id="players-grid" class="players-grid"></div>
 
@@ -50,11 +56,14 @@
                     <h3>Soru</h3>
                     <div class="question-meta">
                         <span id="q-type-badge" class="badge badge-normal">normal</span>
+                        <span id="q-difficulty-badge" class="badge badge-medium">Orta</span>
                         <span id="q-value" class="question-value">0 hasar</span>
                     </div>
                 </div>
                 <p class="played-by-info" id="q-played-by"></p>
-                <div class="timer-bar-container"><div class="timer-bar" id="timer-bar"></div></div>
+                <div class="timer-bar-container">
+                    <div class="timer-bar" id="timer-bar"></div>
+                </div>
                 <div class="question-images">
                     <img id="q-card-img" class="card-image" alt="Kart">
                     <img id="q-question-img" class="question-image" alt="Soru">
@@ -64,7 +73,11 @@
 
             <!-- Hand -->
             <div class="hand-panel glass-panel">
-                <h3>Elin</h3>
+                <div class="hand-header">
+                    <h3>Elin</h3>
+                    <button id="draw-card-btn" class="btn btn-secondary btn-small" onclick="drawCard()"
+                        style="display:none">🃏 Havuzdan Çek</button>
+                </div>
                 <div id="hand-cards" class="hand-cards"></div>
             </div>
 
@@ -72,9 +85,11 @@
             <div class="canvas-panel glass-panel">
                 <div class="canvas-toolbar">
                     <label>Kalem:</label>
-                    <input type="color" id="draw-color" class="color-picker" value="#000000" onchange="onColorChange(event)">
+                    <input type="color" id="draw-color" class="color-picker" value="#000000"
+                        onchange="onColorChange(event)">
                     <label>Boyut:</label>
-                    <input type="range" id="brush-range" class="brush-size" min="1" max="20" value="2" oninput="onBrushSize(event)">
+                    <input type="range" id="brush-range" class="brush-size" min="1" max="20" value="2"
+                        oninput="onBrushSize(event)">
                     <button class="btn btn-small btn-secondary" onclick="toggleEraser()">Silgi</button>
                     <button class="btn btn-small btn-secondary" onclick="clearCanvas()">Temizle</button>
                 </div>
@@ -100,6 +115,8 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+    <script src="/sounds.js"></script>
     <script src="/game.js"></script>
 </body>
+
 </html>
