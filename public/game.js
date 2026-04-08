@@ -23,8 +23,9 @@ function showScreen(s) { $('lobby').style.display = s === 'lobby' ? 'block' : 'n
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
 // ── Lobby ──────────────────────────────────────────────────────────────────────
-function createRoom() { const n = $('username').value.trim(); if (!n) { toast('Lütfen bir isim girin!', 'warning'); return; } socket.emit('createRoom', n); }
+function createRoom() { const n = $('username').value.trim(); const isPriv = $('isPrivate') && $('isPrivate').checked; if (!n) { toast('Lütfen bir isim girin!', 'warning'); return; } socket.emit('createRoom', { username: n, isPrivate: isPriv }); }
 function joinRoom() { const n = $('username').value.trim(), c = $('roomIdInput').value.trim(); if (!n) { toast('Lütfen bir isim girin!', 'warning'); return; } if (!c) { toast('Lütfen oda kodunu girin!', 'warning'); return; } socket.emit('joinRoom', { roomId: c, username: n }); }
+function joinFromLobby(roomId) { $('roomIdInput').value = roomId; joinRoom(); }
 function startGame() { if (currentRoomId) socket.emit('startGame', currentRoomId); }
 function drawCard() { if (currentRoomId) socket.emit('drawCard', currentRoomId); }
 
@@ -34,6 +35,16 @@ function clearCanvas() { if (canvas) { canvas.clear(); canvas.backgroundColor = 
 function onColorChange(e) { if (canvas) canvas.freeDrawingBrush.color = e.target.value; }
 function onBrushSize(e) { if (canvas) canvas.freeDrawingBrush.width = parseInt(e.target.value, 10); }
 function toggleEraser() { if (!canvas) return; const is = canvas.freeDrawingBrush.color === '#ffffff'; canvas.freeDrawingBrush.color = is ? ($('draw-color').value || '#000') : '#ffffff'; canvas.freeDrawingBrush.width = is ? 2 : 20; toast(is ? 'Kalem modu' : 'Silgi modu', 'info'); }
+
+window.addEventListener('resize', () => {
+    if (canvas) {
+        const w = document.querySelector('.canvas-wrapper');
+        if (w && w.clientWidth) {
+            canvas.setWidth(w.clientWidth);
+            canvas.renderAll();
+        }
+    }
+});
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function hpColor(hp) { const p = Math.max(0, hp) / 200; return p > 0.5 ? 'var(--hp-high)' : p > 0.25 ? 'var(--hp-mid)' : 'var(--hp-low)'; }
@@ -139,6 +150,21 @@ function stopTimer() { if (timerInterval) { clearInterval(timerInterval); timerI
 
 // ── Socket Events ──────────────────────────────────────────────────────────────
 socket.on('connect', () => { myId = socket.id; });
+
+socket.on('lobbyRooms', (rooms) => {
+    const list = $('room-list');
+    if (!list) return;
+    if (rooms.length === 0) {
+        list.innerHTML = `<p style="text-align: center; font-size: 0.85rem; color: #888;">Şu an açık oda yok.</p>`;
+        return;
+    }
+    list.innerHTML = rooms.map(r => `
+        <div style="background: var(--bg-secondary); border: 1px solid var(--border-glass); border-radius: 6px; padding: 10px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s;" onclick="joinFromLobby('${r.id}')" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border-glass)'">
+            <div><strong style="color: var(--text-primary);">${esc(r.host)}</strong> odası</div>
+            <div style="font-size: 0.8rem; color: var(--text-secondary);"><span style="margin-right:8px">${r.count}/4 Oyuncu</span> <span style="background:var(--accent); color:white; padding:2px 6px; border-radius:4px;">KATIL</span></div>
+        </div>
+    `).join('');
+});
 
 socket.on('roomCreated', (state) => {
     currentRoomId = state.id; isHost = true; showScreen('game');

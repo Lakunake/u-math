@@ -208,19 +208,40 @@ function checkEliminations(room) {
 }
 
 // ── Socket.io ──────────────────────────────────────────────────────────────────
+function broadcastLobby() {
+    const publicRooms = Array.from(rooms.values())
+        .filter(r => r.gameState === 'waiting' && !r.isPrivate)
+        .map(r => ({
+            id: r.id,
+            host: r.players[0] ? r.players[0].username : 'Bilinmeyen',
+            count: r.players.length
+        }));
+    io.to('lobby').emit('lobbyRooms', publicRooms);
+}
+
 io.on('connection', (socket) => {
-    socket.on('createRoom', (username) => {
+    socket.join('lobby');
+
+    // Initial emit for new connector
+    const currentPublic = Array.from(rooms.values()).filter(r => r.gameState === 'waiting' && !r.isPrivate).map(r => ({ id: r.id, host: r.players[0] ? r.players[0].username : 'Bilinmeyen', count: r.players.length }));
+    socket.emit('lobbyRooms', currentPublic);
+
+    socket.on('createRoom', (data) => {
+        const username = typeof data === 'string' ? data : data.username;
+        const isPrivate = data.isPrivate || false;
         if (!username || typeof username !== 'string') return;
         const name = username.trim().substring(0, 20); if (!name) return;
         const roomId = uuidv4().substring(0, 6).toUpperCase();
         const room = {
             id: roomId, host: socket.id, players: [{ id: socket.id, username: name, hp: INITIAL_HP, hand: [], isConnected: true }],
-            gameState: 'waiting', direction: 1, currentPlayerIndex: 0, currentPlayerId: socket.id,
+            gameState: 'waiting', isPrivate: isPrivate, direction: 1, currentPlayerIndex: 0, currentPlayerId: socket.id,
             pool: [], currentQuestion: null, answeredThisRound: new Set(), answerTimer: null,
             seenQ: new Map(), damageMultiplier: 1, topCard: null
         };
         rooms.set(roomId, room); socket.join(roomId); socket.data.roomId = roomId;
+        socket.leave('lobby');
         socket.emit('roomCreated', roomSnapshot(room, socket.id));
+        broadcastLobby();
     });
 
     socket.on('joinRoom', ({ roomId, username }) => {
@@ -233,9 +254,11 @@ io.on('connection', (socket) => {
         if (room.players.some(p => p.username === name)) { socket.emit('error', { message: 'Bu isim zaten kullanılıyor!' }); return; }
         room.players.push({ id: socket.id, username: name, hp: INITIAL_HP, hand: [], isConnected: true });
         socket.join(uid); socket.data.roomId = uid;
+        socket.leave('lobby');
         socket.emit('roomJoined', roomSnapshot(room, socket.id));
         socket.to(uid).emit('playerJoined', { username: name, playerCount: room.players.length });
         broadcastRoomState(room);
+        broadcastLobby();
     });
 
     socket.on('startGame', (roomId) => {
@@ -256,6 +279,7 @@ io.on('connection', (socket) => {
         io.to(uid).emit('gameStarted');
         broadcastRoomState(room);
         console.log(`[Oyun] Başladı ${uid}, ${room.players.length} oyuncu, havuz:${room.pool.length}, üstKart:${room.topCard.color}/${room.topCard.number}, maxN:${maxN}`);
+        broadcastLobby();
     });
 
     // ── Play Card ──────────────────────────────────────────────────────────────
@@ -318,7 +342,7 @@ io.on('connection', (socket) => {
         }
 
         const q = room.currentQuestion;
-        
+
         const diffTimeouts = { easy: 100000, medium: 130000, hard: 160000 };
         const timeoutMs = diffTimeouts[q.difficulty] || 130000;
 
@@ -367,13 +391,27 @@ io.on('connection', (socket) => {
         const roomId = socket.data.roomId; if (!roomId) return;
         const room = rooms.get(roomId); if (!room) return;
         const player = room.players.find(p => p.id === socket.id); if (player) player.isConnected = false;
-        if (room.players.every(p => !p.isConnected)) { if (room.answerTimer) clearTimeout(room.answerTimer); rooms.delete(roomId); return; }
+
+        let shouldBroadcast = room.gameState === 'waiting';
+
+        if (room.players.every(p => !p.isConnected)) {
+            if (room.answerTimer) clearTimeout(room.answerTimer);
+            rooms.delete(roomId);
+            if (shouldBroadcast) broadcastLobby();
+            return;
+        }
+
         if (room.host === socket.id) { const nh = room.players.find(p => p.isConnected); if (nh) { room.host = nh.id; io.to(nh.id).emit('becameHost'); } }
+
         if (room.gameState === 'playing' && room.currentPlayerId === socket.id) {
             if (room.currentQuestion) { room.answeredThisRound.add(socket.id); if (!room.players.filter(p => p.hp > 0 && p.isConnected && !room.answeredThisRound.has(p.id)).length) finishRound(roomId); }
             else { advanceTurn(room); broadcastRoomState(room); }
-        } else broadcastRoomState(room);
+        } else {
+            broadcastRoomState(room);
+        }
+
         if (player) io.to(roomId).emit('playerLeft', { username: player.username });
+        if (shouldBroadcast) broadcastLobby();
     });
 });
 
