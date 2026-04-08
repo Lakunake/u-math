@@ -37,6 +37,7 @@ Oyun, düşük gecikme ve tam dinamiklik ön planda tutularak tasarlanmıştır.
 ### Mimari ve Altyapı
 - **Node.js & Express:** Hızlı, modern ve asenkron sunucu altyapısı.
 - **Socket.IO:** Odalar (Rooms) üzerinden düşük gecikmeli, %100 gerçek zamanlı (real-time) soket mimarisi. Veriler saniyesinde senkronize edilir.
+- **Canlı Lobi ve Gizli Odalar:** Ana ekranda bekleyen açık odalar (Lobby Browser) yeni gelen oyunculara eş zamanlı olarak yayınlanır. İsteyen oyuncular "Gizli Oda" seçeneğiyle sadece kod ile erişilebilen oyunlar da kurabilir.
 - **Modüler Soru Havuzu:** Sisteme dinamik bir soru okuma motoru eşlik eder. `/questions/` dizinini otomatik izler, yeni klasör veya `JSON` eklendiğinde anında oyuna entegre eder. Sorular görsel (PNG) kullanılabileceği gibi, JSON içerisine eklenen özel `text` alanı sayesinde **salt metin (görselsiz)** sorular da tam olarak desteklenir.
 
 ### Gelişmiş Algoritmalar
@@ -45,8 +46,8 @@ Oyun, düşük gecikme ve tam dinamiklik ön planda tutularak tasarlanmıştır.
 - **Havuz & Bellek (Pool System):** Dizi-bellek yönetimi (Garbage generation) engellenmiş, optimize edilmiş bir Fisher-Yates karıştırma ve havuz motoruna sahiptir.
 
 ### Kullanıcı Deneyimi ve Arayüz (UI/UX)
-- **Tümleşik Karalama Defteri (Canvas):** Kullanıcıların yanlarında kâğıt kalem olmadan problemleri çözebilmesi için geliştirilen, renk ve boyut seçenekleriyle gelen `Fabric.js` destekli çizim tahtası (Canvas).
-- **Cam Tasarım:** Saf (Vanilla) CSS ile tasarlanmış modern, yarı saydam ve tamamen duyarlı (Responsive) arayüz.
+- **Karalama Defteri (Canvas):** Kullanıcıların yanlarında kâğıt kalem olmadan problemleri çözebilmesi için geliştirilen, renk ve boyut seçenekleriyle gelen `Fabric.js` destekli çizim tahtası (Canvas). Ekran veya telefon yönü değiştiğinde akıllı olarak kendini dinamik (resize) boyutlandırır.
+- **Cam Tasarım:** Saf (Vanilla) CSS ile tasarlanmış modern, yarı saydam arayüz. Telefonlarda (dar ekranlarda) yatay kaydırılabilen (momentum scroll) destekli esnek el kartları ve okunabilirliğe göre tek sütuna indirgenen mobil tasarıma (Responsive Flexbox/Grid) sahiptir.
 - **Sentezlenmiş Ses Motoru (Web Audio API):** Sunucuyu/İstemciyi yavaşlatacak `MP3` veya `WAV` gibi hiçbir dış ses dosyası **kullanılmamıştır**. Özel `sounds.js` motoru sayesinde tarayıcının osilatörünü (Oscillator) kullanarak saf frekanslardan dinamik, ses dosyası gerektirmeyen sıfır-boyut efektler (`SFX`) çıkartılır (Örneğin; geri sayım sesi, doğru/yanlış sesi, kart atma rüzgarı vs.).
 
 ## Nasıl Çalıştırılır?
