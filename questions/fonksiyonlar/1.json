@@ -1,0 +1,9 @@
+{
+    "text": "f(x) = x² - 4x + 5 fonksiyonunun (parabol) kolları katsayılara bakıldığında hangi yöne doğrudur?",
+    "a": "Sağa",
+    "b": "Sola",
+    "c": "Aşağı",
+    "d": "Yukarı",
+    "answer": "d",
+    "difficulty": "easy"
+}

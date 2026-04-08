@@ -1,0 +1,9 @@
+{
+    "text": "Doğal sayılarda bir sayının 9 ile tam bölünebilmesi için kural nedir?",
+    "a": "Son rakamı 9 olmalıdır",
+    "b": "Son iki rakamı 9'un katı olmalıdır",
+    "c": "Rakamları çarpımı 9 olmalıdır",
+    "d": "Rakamları toplamı 9'un katı olmalıdır",
+    "answer": "d",
+    "difficulty": "easy"
+}

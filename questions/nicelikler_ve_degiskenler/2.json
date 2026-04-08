@@ -1,0 +1,9 @@
+{
+    "text": "x ve y değişkenleri arasında y = 3x - 2 doğrusal ilişkisi vardır. x değeri 2 birim artarsa y nasıl değişir?",
+    "a": "2 birim artar",
+    "b": "4 birim artar",
+    "c": "6 birim artar",
+    "d": "Değişmez",
+    "answer": "c",
+    "difficulty": "medium"
+}

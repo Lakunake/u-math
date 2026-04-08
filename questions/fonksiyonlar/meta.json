@@ -1,0 +1,17 @@
+{
+    "value": 40,
+    "types": [
+        {
+            "type": "normal",
+            "weight": 60
+        },
+        {
+            "type": "draw4",
+            "weight": 20
+        },
+        {
+            "type": "draw2",
+            "weight": 20
+        }
+    ]
+}

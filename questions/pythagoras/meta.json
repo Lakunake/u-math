@@ -1,8 +1,0 @@
-{
-    "value": 30,
-    "types": [
-        { "type": "normal", "weight": 65 },
-        { "type": "skip",   "weight": 20 },
-        { "type": "reverse","weight": 15 }
-    ]
-}

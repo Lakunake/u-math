@@ -25,7 +25,7 @@ app.use('/cards', express.static('cards'));
 const PORT = process.env.PORT || 3000;
 
 // ── Constants ──────────────────────────────────────────────────────────────────
-const MAX_PLAYERS = 4, INITIAL_HP = 200, HAND_SIZE = 5, ANSWER_TIMEOUT_MS = 30000, COPIES_PER_GROUP = 4;
+const MAX_PLAYERS = 4, INITIAL_HP = 200, HAND_SIZE = 5, COPIES_PER_GROUP = 4;
 const CARD_COLORS = ['red', 'blue', 'green'];
 
 const JOKER_DEFS = [
@@ -77,24 +77,24 @@ function loadQuestionGroups() {
             const gid = entry.name, gdir = path.join(questionsDir, gid);
             let meta = { value: 20 };
             const mp = path.join(gdir, 'meta.json');
-            if (fs.existsSync(mp)) { try { meta = JSON.parse(fs.readFileSync(mp, 'utf8')); } catch (e) { console.error(`Bad meta ${gid}:`, e.message); } }
+            if (fs.existsSync(mp)) { try { meta = JSON.parse(fs.readFileSync(mp, 'utf8')); } catch (e) { console.error(`Bozuk meta ${gid}:`, e.message); } }
             const questions = [];
             for (const f of fs.readdirSync(gdir).filter(f => f.endsWith('.json') && f !== 'meta.json')) {
                 try { const q = JSON.parse(fs.readFileSync(path.join(gdir, f), 'utf8')); q.qId = f.replace('.json', ''); if (!q.difficulty) q.difficulty = 'medium'; questions.push(q); }
-                catch (e) { console.error(`Failed ${gid}/${f}:`, e.message); }
+                catch (e) { console.error(`Yüklenemedi ${gid}/${f}:`, e.message); }
             }
             if (!questions.length) continue;
             const types = normalizeMeta(meta);
             groups.push({ id: gid, types, value: meta.value || 20, questions });
-            console.log(`[Q] ${gid}: ${questions.length}q, types=[${types.map(t => `${t.type}(${t.weight})`).join('/')}], val=${meta.value || 20}`);
+            console.log(`[Soru] ${gid}: ${questions.length} soru, tipler=[${types.map(t => `${t.type}(${t.weight})`).join('/')}], değer=${meta.value || 20}`);
         }
-    } catch (e) { console.error('[Q] Read dir failed:', e.message); }
+    } catch (e) { console.error('[Soru] Klasör okuma düştü:', e.message); }
     return groups;
 }
 questionGroups = loadQuestionGroups();
-console.log(`[Q] Loaded ${questionGroups.length} group(s)`);
+console.log(`[Soru] Yüklendi ${questionGroups.length} grup`);
 fs.watch(questionsDir, { persistent: false, recursive: true }, (ev, fn) => {
-    if (fn && fn.endsWith('.json')) { questionGroups = loadQuestionGroups(); console.log(`[Q] Reloaded → ${questionGroups.length}`); }
+    if (fn && fn.endsWith('.json')) { questionGroups = loadQuestionGroups(); console.log(`[Soru] Yeniden yüklendi → ${questionGroups.length}`); }
 });
 
 function pickQuestion(room, group, forcedDifficulty) {
@@ -217,7 +217,7 @@ io.on('connection', (socket) => {
             id: roomId, host: socket.id, players: [{ id: socket.id, username: name, hp: INITIAL_HP, hand: [], isConnected: true }],
             gameState: 'waiting', direction: 1, currentPlayerIndex: 0, currentPlayerId: socket.id,
             pool: [], currentQuestion: null, answeredThisRound: new Set(), answerTimer: null,
-            seenQ: new Map(), doubleDamageActive: false, topCard: null
+            seenQ: new Map(), damageMultiplier: 1, topCard: null
         };
         rooms.set(roomId, room); socket.join(roomId); socket.data.roomId = roomId;
         socket.emit('roomCreated', roomSnapshot(room, socket.id));
@@ -255,7 +255,7 @@ io.on('connection', (socket) => {
         };
         io.to(uid).emit('gameStarted');
         broadcastRoomState(room);
-        console.log(`[Game] Started ${uid}, ${room.players.length}p, pool:${room.pool.length}, topCard:${room.topCard.color}/${room.topCard.number}, maxN:${maxN}`);
+        console.log(`[Oyun] Başladı ${uid}, ${room.players.length} oyuncu, havuz:${room.pool.length}, üstKart:${room.topCard.color}/${room.topCard.number}, maxN:${maxN}`);
     });
 
     // ── Play Card ──────────────────────────────────────────────────────────────
@@ -285,9 +285,9 @@ io.on('connection', (socket) => {
             const ti = nextPlayerIndex(room, room.currentPlayerIndex);
             const target = ti !== -1 ? room.players[ti] : null;
             const eff = card.jokerEffect;
-            if (eff === 'zap' && target) { target.hp -= card.value; io.to(uid).emit('jokerPlayed', { playedBy: player.username, effect: 'zap', target: target.username, value: card.value, label: card.label }); }
+            if (eff === 'zap' && target) { const dmg = card.value * room.damageMultiplier; target.hp -= dmg; room.damageMultiplier = 1; io.to(uid).emit('jokerPlayed', { playedBy: player.username, effect: 'zap', target: target.username, value: dmg, label: card.label }); }
             else if (eff === 'heal') { player.hp = Math.min(INITIAL_HP, player.hp + card.value); io.to(uid).emit('jokerPlayed', { playedBy: player.username, effect: 'heal', value: card.value, label: card.label }); }
-            else if (eff === 'doubleDamage') { room.doubleDamageActive = true; io.to(uid).emit('jokerPlayed', { playedBy: player.username, effect: 'doubleDamage', label: card.label }); }
+            else if (eff === 'doubleDamage') { room.damageMultiplier *= 2; io.to(uid).emit('jokerPlayed', { playedBy: player.username, effect: 'doubleDamage', label: card.label }); }
             else if (eff === 'steal' && target && target.hand.length) {
                 const si = Math.floor(Math.random() * target.hand.length);
                 player.hand.push(target.hand.splice(si, 1)[0]);
@@ -301,7 +301,7 @@ io.on('connection', (socket) => {
         // ── QUESTION CARD ──────────────────────────────────────────────────
         const group = questionGroups.find(g => g.id === card.id); if (!group) return;
         const question = pickQuestion(room, group, card.forcedDifficulty);
-        let qval = card.value; if (room.doubleDamageActive) { qval *= 2; room.doubleDamageActive = false; }
+        let qval = card.value * room.damageMultiplier; room.damageMultiplier = 1;
         room.currentQuestion = { ...question, groupId: card.id, type: card.type, value: qval };
         room.answeredThisRound = new Set();
         player.hand.push(...drawFromPool(room, 1));
@@ -318,15 +318,19 @@ io.on('connection', (socket) => {
         }
 
         const q = room.currentQuestion;
+        
+        const diffTimeouts = { easy: 100000, medium: 130000, hard: 160000 };
+        const timeoutMs = diffTimeouts[q.difficulty] || 130000;
+
         io.to(uid).emit('newQuestion', {
-            id: card.id, qId: q.qId, type: card.type, a: q.a, b: q.b, c: q.c, d: q.d,
+            id: card.id, qId: q.qId, type: card.type, a: q.a, b: q.b, c: q.c, d: q.d, text: q.text,
             value: qval, difficulty: q.difficulty || 'medium', color: card.color,
             questionImage: `/questions/${card.id}/${q.qId}.png`, cardImage: `/cards/${card.id}.png`,
-            playedBy: player.username, timeoutMs: ANSWER_TIMEOUT_MS
+            playedBy: player.username, timeoutMs: timeoutMs
         });
         broadcastRoomState(room);
         if (room.answerTimer) clearTimeout(room.answerTimer);
-        room.answerTimer = setTimeout(() => handleRoundTimeout(uid), ANSWER_TIMEOUT_MS);
+        room.answerTimer = setTimeout(() => handleRoundTimeout(uid), timeoutMs);
     });
 
     // ── Draw Card (can't play) ─────────────────────────────────────────────
@@ -394,4 +398,4 @@ function advanceTurn(room) {
     room.currentPlayerIndex = ni; room.currentPlayerId = room.players[ni].id;
     io.to(room.id).emit('turnChanged', { playerId: room.currentPlayerId, username: room.players[ni].username, direction: room.direction });
 }
-server.listen(PORT, () => console.log(`[Server] http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`[Sunucu] http://localhost:${PORT} adresinde çalışıyor`));

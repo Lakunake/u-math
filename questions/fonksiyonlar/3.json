@@ -1,0 +1,9 @@
+{
+    "text": "f(x) = √(x - 4) köklü fonksiyonunun reel sayılarda tanımlı olması için x'in değer aralığı ne olmalıdır?",
+    "a": "x > 0",
+    "b": "x < 4",
+    "c": "x ≥ 4",
+    "d": "Tüm reel sayılar",
+    "answer": "c",
+    "difficulty": "hard"
+}

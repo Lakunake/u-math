@@ -1,0 +1,9 @@
+{
+    "text": "f(x) = 1 / (x - 3) rasyonel fonksiyonunun en geniş tanım kümesinde hangi reel sayı BULUNMAZ?",
+    "a": "0",
+    "b": "1",
+    "c": "3",
+    "d": "-3",
+    "answer": "c",
+    "difficulty": "medium"
+}

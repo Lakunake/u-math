@@ -1,0 +1,9 @@
+{
+    "text": "ABC üçgeninde [AD] iç açıortaydır. |AB|=6, |AC|=9, |BD|=4 ise |DC| kaçtır?",
+    "a": "5",
+    "b": "6",
+    "c": "7",
+    "d": "8",
+    "answer": "b",
+    "difficulty": "hard"
+}

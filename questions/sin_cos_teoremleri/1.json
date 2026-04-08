@@ -1,0 +1,9 @@
+{
+    "text": "Kosinüs teoremine göre: c² = a² + b² - 2ab.cos(C) formülünde C açısı 90° olursa formül hangi teoreme dönüşür?",
+    "a": "Öklid",
+    "b": "Thales",
+    "c": "Pisagor",
+    "d": "Sinüs",
+    "answer": "c",
+    "difficulty": "easy"
+}

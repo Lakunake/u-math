@@ -1,0 +1,9 @@
+{
+    "text": "Bir veri grubunun standart sapması 0 (sıfır) ise bu durum ne anlama gelir?",
+    "a": "Hata yapılmıştır",
+    "b": "Sayılar negatiftir",
+    "c": "Tüm veriler birbirine eşittir",
+    "d": "Ortalama sıfırdır",
+    "answer": "c",
+    "difficulty": "medium"
+}

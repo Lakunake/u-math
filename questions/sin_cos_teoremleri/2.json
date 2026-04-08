@@ -1,0 +1,9 @@
+{
+    "text": "ABC üçgeninde |AB|=5, |AC|=8 ve m(A) = 60° ise |BC| uzunluğu kaçtır?",
+    "a": "7",
+    "b": "8",
+    "c": "√49",
+    "d": "Hem A hem C",
+    "answer": "d",
+    "difficulty": "medium"
+}

@@ -1,0 +1,9 @@
+{
+    "text": "Günlük hayatta sıcaklık ölçümü bir 'değişken' türüdür. Bu değişken nitel midir, nicel midir?",
+    "a": "Nitel",
+    "b": "Nicel (Sürekli)",
+    "c": "Nicel (Kesikli)",
+    "d": "Bilinemez",
+    "answer": "b",
+    "difficulty": "easy"
+}

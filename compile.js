@@ -42,7 +42,7 @@ function walkDir(dir, callback) {
 }
 
 async function compile() {
-    console.log('Starting compilation...');
+    console.log('Derleme başlatılıyor...');
     
     // Create zip
     const output = fs.createWriteStream(OUTPUT_ZIP);
@@ -51,7 +51,7 @@ async function compile() {
     });
 
     output.on('close', function() {
-        console.log(`Compilation complete. Created ${OUTPUT_ZIP} (${archive.pointer()} total bytes)`);
+        console.log(`Derleme tamamlandı. ${OUTPUT_ZIP} oluşturuldu (Toplam: ${archive.pointer()} bayt)`);
     });
 
     archive.on('warning', function(err) {
@@ -86,7 +86,7 @@ async function compile() {
                         // use p1 for captured group (inside comment), fallback to match if full replace
                         let cmtText = (typeof p1 === 'string' ? p1 : match).trim();
                         // formatting output
-                        console.log(`removed lines '${cmtText}' on ${path.basename(relPath)} in line ${line} character ${char}`);
+                        console.log(`Yorumlar silindi: '${cmtText}' | Dosya: ${path.basename(relPath)} | Satır: ${line} Karakter: ${char}`);
                         
                         return '';
                     });
@@ -100,28 +100,30 @@ async function compile() {
                     processReplacements(/\/\*([\s\S]*?)\*\//g);
                 } else {
                     // For JS, JSON
-                    processReplacements(/\/\*([\s\S]*?)\*\//g);
-                    // Match // comments without touching http:// URLs
-                    stripped = stripped.replace(/([^:|"|'])\/\/([^\r\n]*)/g, (match, before, cmtText, offset) => {
-                        const actualOffset = offset + before.length;
-                        const linesBefore = content.substring(0, actualOffset).split('\n');
+                    // Safely remove block and line comments while ignoring anything inside strings (single, double, or template literals)
+                    const jsRegex = /\/\*([\s\S]*?)\*\/|\/\/([^\r\n]*)|("(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*'|`(?:\\[\s\S]|[^`\\])*`)/g;
+                    stripped = stripped.replace(jsRegex, (match, blockCmt, lineCmt, stringLiteral, offset) => {
+                        if (stringLiteral) return stringLiteral; // Keep string literals intact
+                        
+                        const linesBefore = content.substring(0, offset).split('\n');
                         const line = linesBefore.length;
                         const char = linesBefore[linesBefore.length - 1].length + 1;
+                        const cmtText = (blockCmt !== undefined ? blockCmt : lineCmt).trim();
                         
-                        console.log(`removed lines '${cmtText.trim()}' on ${path.basename(relPath)} in line ${line} character ${char}`);
-                        return before;
+                        console.log(`Yorumlar silindi: '${cmtText}' | Dosya: ${path.basename(relPath)} | Satır: ${line} Karakter: ${char}`);
+                        return '';
                     });
                 }
 
                 archive.append(stripped, { name: relPath });
             } catch (err) {
-                console.error(`Error processing ${relPath}:`, err);
+                console.error(`Hata işleniyor ${relPath}:`, err);
                 archive.file(fullPath, { name: relPath });
             }
         } else {
             // Add file as is
             archive.file(fullPath, { name: relPath });
-            console.log(`Added as is: ${relPath}`);
+            console.log(`Olduğu gibi eklendi: ${relPath}`);
         }
     });
 

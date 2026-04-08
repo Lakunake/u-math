@@ -38,6 +38,7 @@ function toggleEraser() { if (!canvas) return; const is = canvas.freeDrawingBrus
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function hpColor(hp) { const p = Math.max(0, hp) / 200; return p > 0.5 ? 'var(--hp-high)' : p > 0.25 ? 'var(--hp-mid)' : 'var(--hp-low)'; }
 const difficultyLabels = { easy: 'Kolay', medium: 'Orta', hard: 'Zor' };
+const typeLabels = { normal: 'Normal', skip: 'Atla', reverse: 'Yön Değiştir', draw2: '2 Çek', draw4: '4 Çek', joker: 'Joker' };
 const jokerDescriptions = { zap: 'Rakibe hasar', heal: 'HP kazan', doubleDamage: '2x hasar', steal: 'Kart çal' };
 const colorCSS = { red: '#ef4444', blue: '#3b82f6', green: '#22c55e', wild: '#a855f7' };
 const colorLabels = { red: 'Kırmızı', blue: 'Mavi', green: 'Yeşil', wild: 'Joker' };
@@ -101,7 +102,7 @@ function renderHand(hand, isMyTurn) {
                 <div class="hand-card-name">${esc(card.label)}</div>
                 ${numDisplay}
                 <div class="hand-card-value">${card.value} hasar</div>
-                ${card.type !== 'normal' ? `<div class="hand-card-type badge badge-${card.type}">${card.type}</div>` : ''}
+                ${card.type !== 'normal' ? `<div class="hand-card-type badge badge-${card.type}">${typeLabels[card.type] || card.type}</div>` : ''}
                 ${diffBadge}
             `;
         }
@@ -165,15 +166,16 @@ socket.on('gameStarted', () => { $('start-game-btn').style.display = 'none'; $('
 
 socket.on('newQuestion', (q) => {
     $('question-panel').style.display = 'block';
+    const tt = $('q-title-text'); if (tt) tt.textContent = q.text ? q.text : 'Soru';
     $('q-played-by').innerHTML = `<strong>${esc(q.playedBy)}</strong> tarafından oynandı`;
-    $('q-type-badge').className = `badge badge-${q.type}`; $('q-type-badge').textContent = q.type;
+    $('q-type-badge').className = `badge badge-${q.type}`; $('q-type-badge').textContent = typeLabels[q.type] || q.type;
     $('q-value').textContent = q.value + ' hasar';
     const db = $('q-difficulty-badge'); if (db) { db.className = `badge badge-${q.difficulty || 'medium'}`; db.textContent = difficultyLabels[q.difficulty] || 'Orta'; }
     const ci = $('q-card-img'); ci.style.display = ''; ci.onerror = function () { this.style.display = 'none' }; ci.src = q.cardImage;
     const qi = $('q-question-img'); qi.style.display = ''; qi.onerror = function () { this.style.display = 'none' }; qi.src = q.questionImage;
     const opts = $('options-grid'); opts.innerHTML = '';
     ['a', 'b', 'c', 'd'].forEach(k => { const b = document.createElement('button'); b.className = 'option-btn'; b.innerHTML = `<span class="option-label">${k.toUpperCase()}</span>${esc(q[k])}`; b.onclick = () => { submitAnswer(k); opts.querySelectorAll('.option-btn').forEach(x => x.disabled = true); }; opts.appendChild(b); });
-    startTimer(q.timeoutMs || 30000); clearCanvas();
+    startTimer(q.timeoutMs || 130000); clearCanvas();
 });
 
 function submitAnswer(a) { socket.emit('submitAnswer', { roomId: currentRoomId, answer: a }); }

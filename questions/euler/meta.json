@@ -1,9 +1,0 @@
-{
-    "value": 40,
-    "types": [
-        { "type": "normal",  "weight": 30 },
-        { "type": "reverse", "weight": 25 },
-        { "type": "draw2",   "weight": 20 },
-        { "type": "draw4",   "weight": 5 }
-    ]
-}
