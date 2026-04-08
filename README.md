@@ -45,7 +45,7 @@ Oyun, düşük gecikme ve tam dinamiklik ön planda tutularak tasarlanmıştır.
 - **Dinamik UNO Numaralandırması:** `maxNumber = Math.floor(Math.sqrt(totalQuestions))` gibi özel bir algoritma kullanır. Yani oyuna ne kadar soru eklenirse (Örn: 9 soru için max sayı 3 iken, 81 soruda tam numaralandırma 9'a çıkar) sayı eşleşmeleri zorluğu kendini otomatik dengeler.
 - **Havuz & Bellek (Pool System):** Dizi-bellek yönetimi (Garbage generation) engellenmiş, optimize edilmiş bir Fisher-Yates karıştırma ve havuz motoruna sahiptir.
 
-### Kullanıcı Deneyimi ve Arayüz (UI/UX)
+### Kullanıcı Deneyimi ve Arayüz
 - **Karalama Defteri (Canvas):** Kullanıcıların yanlarında kâğıt kalem olmadan problemleri çözebilmesi için geliştirilen, renk ve boyut seçenekleriyle gelen `Fabric.js` destekli çizim tahtası (Canvas). Ekran veya telefon yönü değiştiğinde akıllı olarak kendini dinamik (resize) boyutlandırır.
 - **Cam Tasarım:** Saf (Vanilla) CSS ile tasarlanmış modern, yarı saydam arayüz. Telefonlarda (dar ekranlarda) yatay kaydırılabilen (momentum scroll) destekli esnek el kartları ve okunabilirliğe göre tek sütuna indirgenen mobil tasarıma (Responsive Flexbox/Grid) sahiptir.
 - **Sentezlenmiş Ses Motoru (Web Audio API):** Sunucuyu/İstemciyi yavaşlatacak `MP3` veya `WAV` gibi hiçbir dış ses dosyası **kullanılmamıştır**. Özel `sounds.js` motoru sayesinde tarayıcının osilatörünü (Oscillator) kullanarak saf frekanslardan dinamik, ses dosyası gerektirmeyen sıfır-boyut efektler (`SFX`) çıkartılır (Örneğin; geri sayım sesi, doğru/yanlış sesi, kart atma rüzgarı vs.).
