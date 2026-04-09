@@ -7,11 +7,11 @@ const OUTPUT_ZIP = path.join(ROOT_DIR, 'build.zip');
 
 const IGNORED_FOLDERS = ['.git', 'node_modules', '.gemini'];
 const IGNORED_FILES = [
-    'build.zip', 
-    'compile.js', 
-    'AGENTREADME', 
-    '.gitattributes', 
-    '.gitignore', 
+    'build.zip',
+    'compile.js',
+    'AGENTREADME',
+    '.gitattributes',
+    '.gitignore',
     'agents_todo.md',
     'agent_todo.md'
 ];
@@ -26,7 +26,7 @@ function walkDir(dir, callback) {
     for (const file of files) {
         const fullPath = path.join(dir, file);
         const relPath = path.relative(ROOT_DIR, fullPath);
-        
+
         // Skip ignored directories
         if (fs.statSync(fullPath).isDirectory()) {
             if (!IGNORED_FOLDERS.includes(file)) {
@@ -43,18 +43,18 @@ function walkDir(dir, callback) {
 
 async function compile() {
     console.log('Derleme başlatılıyor...');
-    
+
     // Create zip
     const output = fs.createWriteStream(OUTPUT_ZIP);
     const archive = archiver('zip', {
         zlib: { level: 9 } // Sets the compression level.
     });
 
-    output.on('close', function() {
+    output.on('close', function () {
         console.log(`Derleme tamamlandı. ${OUTPUT_ZIP} oluşturuldu (Toplam: ${archive.pointer()} bayt)`);
     });
 
-    archive.on('warning', function(err) {
+    archive.on('warning', function (err) {
         if (err.code === 'ENOENT') {
             console.warn(err);
         } else {
@@ -62,7 +62,7 @@ async function compile() {
         }
     });
 
-    archive.on('error', function(err) {
+    archive.on('error', function (err) {
         throw err;
     });
 
@@ -70,24 +70,24 @@ async function compile() {
 
     walkDir(ROOT_DIR, (fullPath, relPath) => {
         const ext = path.extname(fullPath).toLowerCase();
-        
+
         if (requiresStripping(ext) && !relPath.endsWith('package.json') && !relPath.endsWith('package-lock.json')) {
             try {
                 const content = fs.readFileSync(fullPath, 'utf8');
                 let stripped = content;
-                
+
                 const processReplacements = (regex) => {
                     stripped = stripped.replace(regex, (match, p1, offset) => {
                         // calculate lines before
                         const linesBefore = content.substring(0, offset).split('\n');
                         const line = linesBefore.length;
                         const char = linesBefore[linesBefore.length - 1].length + 1;
-                        
+
                         // use p1 for captured group (inside comment), fallback to match if full replace
                         let cmtText = (typeof p1 === 'string' ? p1 : match).trim();
                         // formatting output
                         console.log(`Yorumlar silindi: '${cmtText}' | Dosya: ${path.basename(relPath)} | Satır: ${line} Karakter: ${char}`);
-                        
+
                         return '';
                     });
                 };
@@ -104,12 +104,12 @@ async function compile() {
                     const jsRegex = /\/\*([\s\S]*?)\*\/|\/\/([^\r\n]*)|("(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*'|`(?:\\[\s\S]|[^`\\])*`)/g;
                     stripped = stripped.replace(jsRegex, (match, blockCmt, lineCmt, stringLiteral, offset) => {
                         if (stringLiteral) return stringLiteral; // Keep string literals intact
-                        
+
                         const linesBefore = content.substring(0, offset).split('\n');
                         const line = linesBefore.length;
                         const char = linesBefore[linesBefore.length - 1].length + 1;
                         const cmtText = (blockCmt !== undefined ? blockCmt : lineCmt).trim();
-                        
+
                         console.log(`Yorumlar silindi: '${cmtText}' | Dosya: ${path.basename(relPath)} | Satır: ${line} Karakter: ${char}`);
                         return '';
                     });

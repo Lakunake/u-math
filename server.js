@@ -276,7 +276,13 @@ io.on('connection', (socket) => {
             color: startCard.color === 'wild' ? randColor() : startCard.color,
             number: startCard.number ?? Math.floor(Math.random() * (maxN + 1))
         };
-        io.to(uid).emit('gameStarted');
+        const allImages = [];
+        for (const g of questionGroups) {
+            for (const q of g.questions) {
+                allImages.push(`/questions/${g.id}/${q.qId}.png`);
+            }
+        }
+        io.to(uid).emit('gameStarted', { preloads: allImages });
         broadcastRoomState(room);
         console.log(`[Oyun] Başladı ${uid}, ${room.players.length} oyuncu, havuz:${room.pool.length}, üstKart:${room.topCard.color}/${room.topCard.number}, maxN:${maxN}`);
         broadcastLobby();
@@ -393,6 +399,10 @@ io.on('connection', (socket) => {
         const player = room.players.find(p => p.id === socket.id); if (player) player.isConnected = false;
 
         let shouldBroadcast = room.gameState === 'waiting';
+
+        if (room.gameState === 'playing') {
+            if (checkEliminations(room)) return;
+        }
 
         if (room.players.every(p => !p.isConnected)) {
             if (room.answerTimer) clearTimeout(room.answerTimer);

@@ -46,9 +46,12 @@ Oyun, düşük gecikme ve tam dinamiklik ön planda tutularak tasarlanmıştır.
 - **Havuz & Bellek (Pool System):** Dizi-bellek yönetimi (Garbage generation) engellenmiş, optimize edilmiş bir Fisher-Yates karıştırma ve havuz motoruna sahiptir.
 
 ### Kullanıcı Deneyimi ve Arayüz
-- **Karalama Defteri (Canvas):** Kullanıcıların yanlarında kâğıt kalem olmadan problemleri çözebilmesi için geliştirilen, renk ve boyut seçenekleriyle gelen `Fabric.js` destekli çizim tahtası (Canvas). Ekran veya telefon yönü değiştiğinde akıllı olarak kendini dinamik (resize) boyutlandırır.
+- **Karalama Defteri (Canvas):** Kullanıcıların yanlarında kâğıt kalem olmadan problemleri çözebilmesi için geliştirilen, renk ve boyut seçenekleriyle gelen `Fabric.js` destekli çizim tahtası. Geometri çözümlerini kolaylaştırmak amacıyla ince bir milimetrik defter dokusuna sahiptir ve her yeni soruda otomatik olarak temizlenir.
+- **Mikro Etkileşimler (Juiciness):** Hatalı oynanan kartlardaki sarsıntı animasyonları (Card shake), süresi azaldıkça tehlikeye göre sarı ve kırmızı renge bürünüp nabız gibi atan (Pulsing) renkli zamanlayıcılar ve sırası gelen oyuncuyu neon aura ile izole eden sistemlerle maksimum "oyun hissiyatı" (Game Feel) sağlar.
+- **Klavye Yönetimi:** Hızlı oynamak isteyen oyuncular için şıkların (`A, B, C, D`) ve numaraların (`1-9`) klavye makrolarına atanmasıyla masadaki eylemler farenin yanı sıra klavye ile de saniyesinde yönetilebilir.
 - **Cam Tasarım:** Saf (Vanilla) CSS ile tasarlanmış modern, yarı saydam arayüz. Telefonlarda (dar ekranlarda) yatay kaydırılabilen (momentum scroll) destekli esnek el kartları ve okunabilirliğe göre tek sütuna indirgenen mobil tasarıma (Responsive Flexbox/Grid) sahiptir.
-- **Sentezlenmiş Ses Motoru (Web Audio API):** Sunucuyu/İstemciyi yavaşlatacak `MP3` veya `WAV` gibi hiçbir dış ses dosyası **kullanılmamıştır**. Özel `sounds.js` motoru sayesinde tarayıcının osilatörünü (Oscillator) kullanarak saf frekanslardan dinamik, ses dosyası gerektirmeyen sıfır-boyut efektler (`SFX`) çıkartılır (Örneğin; geri sayım sesi, doğru/yanlış sesi, kart atma rüzgarı vs.).
+- **Teknik Optimizasyonlar:** Seri tıklamalardan kaynaklı sunucu hatalarını önlemek için butonlara **Anti-Spam (Debounce)** gecikmesi eklenmiştir. Ayrıca, resimli sorular oyun başlar başlamaz arka planda sessizce istemcinin önbelleğine (Cache) yüklenir ve sorular ekrana *sıfır bekleme süresiyle* yansır.
+- **Sentezlenmiş Ses Motoru (Web Audio API):** Sunucuyu/İstemciyi yavaşlatacak `MP3` veya `WAV` gibi hiçbir dış ses dosyası **kullanılmamıştır**. Özel `sounds.js` motoru sayesinde tarayıcının osilatörünü kullanarak saf frekanslardan sıfır-boyut efektler çıkartılır (Zamanlayıcı biplemesi, hata sesi, kart atma rüzgarı vs.).
 
 ## Nasıl Çalıştırılır?
 

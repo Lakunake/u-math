@@ -924,6 +924,82 @@ body::before {
     margin-bottom: 24px
 }
 
+@keyframes shake-error {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    20%,
+    60% {
+        transform: translateX(-6px);
+    }
+
+    40%,
+    80% {
+        transform: translateX(6px);
+    }
+}
+
+.shake-error {
+    animation: shake-error 0.3s cubic-bezier(.36, .07, .19, .97) both;
+}
+
+@keyframes timer-pulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+        filter: drop-shadow(0 0 4px var(--incorrect));
+    }
+
+    50% {
+        transform: scale(1.02);
+        opacity: 0.85;
+        filter: drop-shadow(0 0 10px var(--incorrect));
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+        filter: drop-shadow(0 0 4px var(--incorrect));
+    }
+}
+
+.timer-urgency-high {
+    animation: timer-pulse 0.5s ease-in-out infinite;
+    background-color: var(--incorrect) !important;
+}
+
+.timer-urgency-medium {
+    background-color: var(--warning) !important;
+}
+
+.active-turn-glow {
+    box-shadow: 0 0 15px 4px var(--accent);
+    border-color: var(--accent) !important;
+    animation: turn-pulse 2s infinite;
+}
+
+@keyframes turn-pulse {
+    0% {
+        box-shadow: 0 0 10px 2px var(--accent-glow);
+    }
+
+    50% {
+        box-shadow: 0 0 20px 4px var(--accent);
+    }
+
+    100% {
+        box-shadow: 0 0 10px 2px var(--accent-glow);
+    }
+}
+
+.math-grid-bg {
+    background-size: 20px 20px;
+    background-image: linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+}
+
 @media(max-width:640px) {
     .header h1 {
         font-size: 1.8rem

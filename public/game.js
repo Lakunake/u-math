@@ -23,11 +23,14 @@ function showScreen(s) { $('lobby').style.display = s === 'lobby' ? 'block' : 'n
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
 // ── Lobby ──────────────────────────────────────────────────────────────────────
-function createRoom() { const n = $('username').value.trim(); const isPriv = $('isPrivate') && $('isPrivate').checked; if (!n) { toast('Lütfen bir isim girin!', 'warning'); return; } socket.emit('createRoom', { username: n, isPrivate: isPriv }); }
-function joinRoom() { const n = $('username').value.trim(), c = $('roomIdInput').value.trim(); if (!n) { toast('Lütfen bir isim girin!', 'warning'); return; } if (!c) { toast('Lütfen oda kodunu girin!', 'warning'); return; } socket.emit('joinRoom', { roomId: c, username: n }); }
+let lastActionTime = 0;
+function canAct() { if (Date.now() - lastActionTime < 400) return false; lastActionTime = Date.now(); return true; }
+
+function createRoom() { if (!canAct()) return; const n = $('username').value.trim(); const isPriv = $('isPrivate') && $('isPrivate').checked; if (!n) { toast('Lütfen bir isim girin!', 'warning'); return; } socket.emit('createRoom', { username: n, isPrivate: isPriv }); }
+function joinRoom() { if (!canAct()) return; const n = $('username').value.trim(), c = $('roomIdInput').value.trim(); if (!n) { toast('Lütfen bir isim girin!', 'warning'); return; } if (!c) { toast('Lütfen oda kodunu girin!', 'warning'); return; } socket.emit('joinRoom', { roomId: c, username: n }); }
 function joinFromLobby(roomId) { $('roomIdInput').value = roomId; joinRoom(); }
 function startGame() { if (currentRoomId) socket.emit('startGame', currentRoomId); }
-function drawCard() { if (currentRoomId) socket.emit('drawCard', currentRoomId); }
+function drawCard() { if (!canAct()) return; if (currentRoomId) socket.emit('drawCard', currentRoomId); }
 
 // ── Canvas ─────────────────────────────────────────────────────────────────────
 function initCanvas() { const w = document.querySelector('.canvas-wrapper'); canvas = new fabric.Canvas('solver-canvas', { isDrawingMode: true, width: w.clientWidth || 600, height: 300 }); canvas.freeDrawingBrush = new fabric.PencilBrush(canvas); canvas.freeDrawingBrush.width = 2; canvas.freeDrawingBrush.color = '#000'; canvas.backgroundColor = '#fff'; canvas.renderAll(); }
@@ -58,8 +61,8 @@ const colorLabels = { red: 'Kırmızı', blue: 'Mavi', green: 'Yeşil', wild: 'J
 function renderPlayers(state) {
     const g = $('players-grid'); g.innerHTML = '';
     state.players.forEach(p => {
-        const pct = Math.max(0, (p.hp / 200) * 100), isTurn = p.id === state.currentPlayerId;
-        const cls = ['player-card', 'glass-panel', isTurn ? 'is-turn' : '', p.hp <= 0 ? 'is-dead' : '', !p.isConnected ? 'is-disconnected' : ''].filter(Boolean).join(' ');
+        const pct = Math.max(0, (p.hp / 200) * 100), isTurn = p.id === state.currentPlayerId && state.gameState === 'playing';
+        const cls = ['player-card', 'glass-panel', isTurn ? 'is-turn active-turn-glow' : '', p.hp <= 0 ? 'is-dead' : '', !p.isConnected ? 'is-disconnected' : ''].filter(Boolean).join(' ');
         const hb = p.id === state.host ? '<span class="host-badge">Host</span>' : '';
         g.innerHTML += `<div class="${cls}"><div class="player-name">${esc(p.username)}${hb}</div><div class="player-meta">${p.cardCount} kart</div><div class="hp-bar-container"><div class="hp-bar" style="width:${pct}%;background:${hpColor(p.hp)}"></div></div><div class="hp-text">HP: ${Math.max(0, p.hp)} / 200</div></div>`;
     });
@@ -117,7 +120,17 @@ function renderHand(hand, isMyTurn) {
                 ${diffBadge}
             `;
         }
-        if (!disabled) div.onclick = () => playCard(card.uid);
+        if (!disabled) {
+            div.onclick = () => playCard(card.uid);
+        } else {
+            div.onclick = (e) => {
+                const el = e.currentTarget;
+                el.classList.remove('shake-error');
+                void el.offsetWidth;
+                el.classList.add('shake-error');
+                SFX.wrong();
+            };
+        }
         container.appendChild(div);
     });
     // Show/hide draw button
@@ -131,18 +144,26 @@ function playCard(cardUid) { SFX.cardPlay(); socket.emit('playCard', { roomId: c
 function startTimer(ms) {
     stopTimer();
     const bar = $('timer-bar'), start = Date.now();
-    bar.style.width = '100%'; bar.classList.remove('urgent');
-    let lastUrgent = false;
+    bar.style.width = '100%'; bar.className = 'timer-bar';
+    let lastTick = -1000;
     timerInterval = setInterval(() => {
         const elapsed = Date.now() - start;
         const p = Math.max(0, 1 - elapsed / ms) * 100;
         bar.style.width = p + '%';
-        const isUrgent = p < 25;
-        if (isUrgent !== lastUrgent) { if (isUrgent) bar.classList.add('urgent'); lastUrgent = isUrgent; }
-        // Tick on each second, faster when urgent
-        const elapsedSec = Math.floor(elapsed / 1000);
-        const prevSec = Math.floor((elapsed - 100) / 1000);
-        if (elapsedSec !== prevSec) SFX.tick(isUrgent);
+
+        const isWarning = p > 20 && p <= 50;
+        const isUrgent = p <= 20;
+
+        // Reset classes
+        bar.className = 'timer-bar';
+        if (isUrgent) bar.classList.add('timer-urgency-high');
+        else if (isWarning) bar.classList.add('timer-urgency-medium');
+
+        const tickFreqMs = isUrgent ? 500 : 1000;
+        if (elapsed - lastTick >= tickFreqMs) {
+            SFX.tick(isUrgent);
+            lastTick = elapsed;
+        }
         if (p <= 0) stopTimer();
     }, 100);
 }
@@ -188,7 +209,15 @@ socket.on('roomUpdated', (state) => {
 socket.on('playerJoined', (d) => toast(`${d.username} katıldı (${d.playerCount}/4)`, 'info'));
 socket.on('playerLeft', (d) => toast(`${d.username} ayrıldı`, 'warning'));
 socket.on('becameHost', () => { isHost = true; $('start-game-btn').style.display = 'inline-flex'; toast('Artık sen hostsun!', 'warning'); });
-socket.on('gameStarted', () => { $('start-game-btn').style.display = 'none'; $('waiting-area').style.display = 'none'; $('question-panel').style.display = 'block'; toast('Oyun başladı!', 'success'); });
+socket.on('gameStarted', (d) => {
+    $('start-game-btn').style.display = 'none';
+    $('waiting-area').style.display = 'none';
+    $('question-panel').style.display = 'block';
+    toast('Oyun başladı!', 'success');
+    if (d && d.preloads) {
+        d.preloads.forEach(src => { const img = new Image(); img.src = src; });
+    }
+});
 
 socket.on('newQuestion', (q) => {
     $('question-panel').style.display = 'block';
@@ -200,11 +229,21 @@ socket.on('newQuestion', (q) => {
     const ci = $('q-card-img'); ci.style.display = ''; ci.onerror = function () { this.style.display = 'none' }; ci.src = q.cardImage;
     const qi = $('q-question-img'); qi.style.display = ''; qi.onerror = function () { this.style.display = 'none' }; qi.src = q.questionImage;
     const opts = $('options-grid'); opts.innerHTML = '';
-    ['a', 'b', 'c', 'd'].forEach(k => { const b = document.createElement('button'); b.className = 'option-btn'; b.innerHTML = `<span class="option-label">${k.toUpperCase()}</span>${esc(q[k])}`; b.onclick = () => { submitAnswer(k); opts.querySelectorAll('.option-btn').forEach(x => x.disabled = true); }; opts.appendChild(b); });
+    ['a', 'b', 'c', 'd'].forEach(k => {
+        const b = document.createElement('button');
+        b.className = 'option-btn';
+        b.innerHTML = `<span class="option-label">${k.toUpperCase()}</span>${esc(q[k])}`;
+        b.onclick = () => submitAnswer(k);
+        opts.appendChild(b);
+    });
     startTimer(q.timeoutMs || 130000); clearCanvas();
 });
 
-function submitAnswer(a) { socket.emit('submitAnswer', { roomId: currentRoomId, answer: a }); }
+function submitAnswer(a) {
+    if (!canAct()) return;
+    $('options-grid').querySelectorAll('.option-btn').forEach(x => x.disabled = true);
+    socket.emit('submitAnswer', { roomId: currentRoomId, answer: a });
+}
 socket.on('answerResult', (d) => { stopTimer(); toast(d.message, d.correct ? 'success' : 'error'); if (d.correct) SFX.correct(); else { SFX.wrong(); if (d.damage) SFX.damage(); } });
 
 socket.on('drewCards', (d) => { SFX.draw(); toast(`${d.count} kart çektin!`, 'info'); });
@@ -227,8 +266,32 @@ socket.on('turnChanged', (d) => {
     }
 });
 
-socket.on('gameOver', (d) => { stopTimer(); SFX.gameOver(); $('game-over-overlay').classList.add('visible'); $('winner-name').textContent = d.winner || 'Kimse'; $('eliminated-list').textContent = d.eliminated.length ? 'Elenenler: ' + d.eliminated.join(', ') : ''; });
+socket.on('gameOver', (d) => {
+    stopTimer(); SFX.gameOver(); $('game-over-overlay').classList.add('visible');
+    const wTitle = $('winner-name');
+    if (!d.winner) { wTitle.textContent = 'Berabere! Herkes Elendi.'; wTitle.style.color = 'var(--text-secondary)'; }
+    else { wTitle.textContent = d.winner; wTitle.style.color = 'var(--warning)'; }
+    $('eliminated-list').textContent = d.eliminated.length ? 'Elenenler: ' + d.eliminated.join(', ') : '';
+});
 socket.on('error', (d) => toast(d.message || d, 'error'));
 function returnToLobby() { $('game-over-overlay').classList.remove('visible'); showScreen('lobby'); currentRoomId = null; isHost = false; $('question-panel').style.display = 'none'; }
 
-document.addEventListener('keydown', (e) => { if (e.target.tagName === 'INPUT') return; const m = { '1': 'a', '2': 'b', '3': 'c', '4': 'd' }; if (m[e.key]) { const bs = $('options-grid').querySelectorAll('.option-btn:not(:disabled)'); const i = 'abcd'.indexOf(m[e.key]); if (bs[i]) bs[i].click(); } });
+document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.repeat) return;
+    const key = e.key.toLowerCase();
+
+    // A, B, C, D for answers
+    const ansMap = { 'a': 0, 'b': 1, 'c': 2, 'd': 3 };
+    if (ansMap[key] !== undefined) {
+        const opts = $('options-grid').querySelectorAll('.option-btn:not(:disabled)');
+        if (opts[ansMap[key]]) opts[ansMap[key]].click();
+    }
+
+    // 1-9 for hand cards
+    const num = parseInt(key, 10);
+    if (num >= 1 && num <= 9) {
+        if (!canAct()) return; // block card spam
+        const cards = $('hand-cards').querySelectorAll('.hand-card');
+        if (cards[num - 1]) cards[num - 1].click();
+    }
+});
