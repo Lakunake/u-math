@@ -4,7 +4,7 @@ U-MAt(hematics), sevilen kart oyunu UNO'nun kuralları ile rekabetçi matematik 
 
 ## Oynanış
 
-Her oyuncu oyuna **200 HP** ile başlar. Eldeki kartlardan biri oynanarak oyun sürdürülür. Kartı oynayan dahil olmak üzere tüm oyuncular, kartın belirlediği matematik sorusunu süre bitmeden doğru çözmek zorundadır. Soruyu yanlış cevaplayanlar veya süre bitmeden çözemeyenler kartın hasar puanını (HP) kaybeder.
+Her oyuncu oyuna **200 HP**(sağlık puanı) ile başlar. Eldeki kartlardan biri oynanarak oyun sürdürülür. Kartı oynayan dahil olmak üzere tüm oyuncular, kartın belirlediği matematik sorusunu süre bitmeden doğru çözmek zorundadır. Soruyu yanlış cevaplayanlar veya süre bitmeden çözemeyenler kartın hasar puanını (HP) kaybeder.
 
 ### Temel Kurallar
 - **Renk ve Numara:** Oyuncuların sırası geldiğinde masadaki son kartın **rengiyle (Kırmızı, Mavi, Yeşil)** veya **numarasıyla (0-9)** eşleşen bir kart atmaları gerekir.
