@@ -1,4 +1,4 @@
-# U-MAt(hematics)
+# U-Ma(th)
 
 U-MAt(hematics), sevilen kart oyunu UNO'nun kuralları ile rekabetçi matematik çözme dinamiklerini birleştiren, gerçek zamanlı, çok oyunculu çevrimiçi bir web oyunudur.
 
