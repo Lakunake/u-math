@@ -1,10 +1,11 @@
-# U-MAt(hematics)
+>for those coming from my other projects, this is my math project that i will *probably* not update further.
+# U-Ma(th)
 
 U-MAt(hematics), sevilen kart oyunu UNO'nun kuralları ile rekabetçi matematik çözme dinamiklerini birleştiren, gerçek zamanlı, çok oyunculu çevrimiçi bir web oyunudur.
 
 ## Oynanış
 
-Her oyuncu oyuna **200 HP** ile başlar. Eldeki kartlardan biri oynanarak oyun sürdürülür. Kartı oynayan dahil olmak üzere tüm oyuncular, kartın belirlediği matematik sorusunu süre bitmeden doğru çözmek zorundadır. Soruyu yanlış cevaplayanlar veya süre bitmeden çözemeyenler kartın hasar puanını (HP) kaybeder.
+Her oyuncu oyuna **200 HP**(sağlık puanı) ile başlar. Eldeki kartlardan biri oynanarak oyun sürdürülür. Kartı oynayan dahil olmak üzere tüm oyuncular, kartın belirlediği matematik sorusunu süre bitmeden doğru çözmek zorundadır. Soruyu yanlış cevaplayanlar veya süre bitmeden çözemeyenler kartın hasar puanını (HP) kaybeder.
 
 ### Temel Kurallar
 - **Renk ve Numara:** Oyuncuların sırası geldiğinde masadaki son kartın **rengiyle (Kırmızı, Mavi, Yeşil)** veya **numarasıyla (0-9)** eşleşen bir kart atmaları gerekir.
@@ -30,7 +31,7 @@ Masadaki renk ve numaradan bağımsız olarak her an oynanabilir ve oyunun kural
 
 ---
 
-## 🛠 Teknik Özellikler
+## Teknik Özellikler
 
 Oyun, düşük gecikme ve tam dinamiklik ön planda tutularak tasarlanmıştır.
 
