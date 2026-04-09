@@ -19,7 +19,7 @@
   "bugs": {
     "url": "https://github.com/Lakunake/u-math/issues"
   },
-  "homepage": "https://github.com/Lakunake/u-math#readme",
+  "homepage": "https://github.com/Lakunake/u-math",
   "dependencies": {
     "cors": "^2.8.6",
     "express": "^5.2.1",
