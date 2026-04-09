@@ -1,7 +1,7 @@
 {
   "name": "u-math",
   "version": "1.0.0",
-  "description": "",
+  "description": "node.js based math x uno card game",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -13,8 +13,8 @@
     "url": "git+https://github.com/Lakunake/u-math.git"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Lakunake",
+  "license": "Unlicense License",
   "type": "commonjs",
   "bugs": {
     "url": "https://github.com/Lakunake/u-math/issues"
