@@ -31,7 +31,7 @@ Masadaki renk ve numaradan bağımsız olarak her an oynanabilir ve oyunun kural
 
 ---
 
-## 🛠 Teknik Özellikler
+## Teknik Özellikler
 
 Oyun, düşük gecikme ve tam dinamiklik ön planda tutularak tasarlanmıştır.
 
