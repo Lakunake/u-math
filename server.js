@@ -93,9 +93,27 @@ function loadQuestionGroups() {
 }
 questionGroups = loadQuestionGroups();
 console.log(`[Soru] Yüklendi ${questionGroups.length} grup`);
-fs.watch(questionsDir, { persistent: false, recursive: true }, (ev, fn) => {
+let isPardus = false;
+try {
+    if (fs.existsSync('/etc/os-release')) {
+        isPardus = fs.readFileSync('/etc/os-release', 'utf8').toLowerCase().includes('pardus');
+    }
+} catch (e) {}
+
+const onQuestionChange = (ev, fn) => {
     if (fn && fn.endsWith('.json')) { questionGroups = loadQuestionGroups(); console.log(`[Soru] Yeniden yüklendi → ${questionGroups.length}`); }
-});
+};
+
+try {
+    if (isPardus || process.platform === 'linux') {
+        fs.watch(questionsDir, { persistent: false }, onQuestionChange);
+        for (const entry of fs.readdirSync(questionsDir, { withFileTypes: true })) {
+            if (entry.isDirectory()) fs.watch(path.join(questionsDir, entry.name), { persistent: false }, onQuestionChange);
+        }
+    } else {
+        fs.watch(questionsDir, { persistent: false, recursive: true }, onQuestionChange);
+    }
+} catch (e) {}
 
 function pickQuestion(room, group, forcedDifficulty) {
     if (!room.seenQ) room.seenQ = new Map();
